@@ -10,7 +10,7 @@ SENTINEL performs passive website investigations using the URL submitted by the 
 ## Local development
 
 ```powershell
-npm ci --legacy-peer-deps
+npm ci
 Copy-Item .env.example .env
 npm run dev
 ```
