@@ -21,10 +21,9 @@ dotenv.config();
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-async function startServer() {
+export async function createApp() {
   const app = express();
   app.disable('x-powered-by');
-  const PORT = parseInt(process.env.PORT || '3000', 10);
   const trustedProxy = process.env.TRUST_PROXY?.trim();
   if (trustedProxy) {
     if (trustedProxy.toLowerCase() === 'true' || /^\d+$/.test(trustedProxy)) {
@@ -508,7 +507,11 @@ async function startServer() {
   // ==========================================
   // Vite Dev Server / Static Hosting
   // ==========================================
-  if (process.env.NODE_ENV !== 'production') {
+  if (process.env.VERCEL === '1') {
+    app.use((_req: Request, res: Response) => {
+      res.status(404).json({ error: 'API endpoint not found.' });
+    });
+  } else if (process.env.NODE_ENV !== 'production') {
     const vite = await createViteServer({
       server: { middlewareMode: true },
       appType: 'spa',
@@ -537,12 +540,20 @@ async function startServer() {
     res.status(500).json({ error: 'Internal server error.' });
   });
 
+  return app;
+}
+
+async function startServer() {
+  const app = await createApp();
+  const PORT = parseInt(process.env.PORT || '3000', 10);
   app.listen(PORT, '0.0.0.0', () => {
     console.log(`[SENTINEL ENGINE] Threat Intelligence platform online on port ${PORT}`);
   });
 }
 
-startServer().catch(err => {
-  console.error('Failed to start Sentinel server:', err);
-  process.exit(1);
-});
+if (process.env.VERCEL !== '1') {
+  startServer().catch(err => {
+    console.error('Failed to start Sentinel server:', err);
+    process.exit(1);
+  });
+}

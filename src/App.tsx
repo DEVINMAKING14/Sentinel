@@ -14,6 +14,19 @@ import { SubmitReportModal } from './components/SubmitReportModal';
 import { LiveScannerView } from './components/LiveScannerView';
 import { ScanResult, ThreatReport, DashboardOverview } from './types';
 
+async function readApiResponse(response: Response): Promise<unknown> {
+  const body = await response.text();
+  try {
+    return body ? JSON.parse(body) : {};
+  } catch {
+    const isHtml = /^\s*(?:<!doctype html|<html\b)/i.test(body);
+    const summary = isHtml
+      ? 'The hosting service returned an HTML page instead of the investigation API response. Check that the backend API function is deployed and routed.'
+      : `The server returned a non-JSON response (HTTP ${response.status}): ${body.trim().slice(0, 180)}`;
+    throw new Error(summary);
+  }
+}
+
 export default function App() {
   const [topTab, setTopTab] = useState<TopNavTab>('investigate');
   const [scans, setScans] = useState<ScanResult[]>([]);
@@ -77,13 +90,20 @@ export default function App() {
         body: JSON.stringify({ url }),
       });
 
-      const data = await response.json();
+      const data = await readApiResponse(response);
       if (!response.ok) {
-        throw new Error(data.details || data.error || 'Scan failed.');
+        const errorData = data && typeof data === 'object'
+          ? data as { details?: unknown; error?: unknown }
+          : {};
+        throw new Error(
+          (typeof errorData.details === 'string' && errorData.details) ||
+          (typeof errorData.error === 'string' && errorData.error) ||
+          'Scan failed.',
+        );
       }
 
       if (requestId === activeScanRequest.current) {
-        setCurrentScan(data);
+        setCurrentScan(data as ScanResult);
         void loadData();
       }
     } catch (err: unknown) {

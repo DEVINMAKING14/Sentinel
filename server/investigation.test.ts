@@ -211,6 +211,44 @@ test('does not retain scans in production mode', async () => {
   }
 });
 
+test('creates a Vercel-compatible API app without opening a standalone listener', async () => {
+  const previousVercel = process.env.VERCEL;
+  const previousNodeEnv = process.env.NODE_ENV;
+  process.env.VERCEL = '1';
+  process.env.NODE_ENV = 'production';
+
+  let server: http.Server | undefined;
+  try {
+    const { createApp } = await import('../server');
+    const app = await createApp();
+    server = app.listen(0, '127.0.0.1');
+    await once(server, 'listening');
+    const address = server.address();
+    assert.ok(address && typeof address !== 'string');
+
+    const historyResponse = await fetch(`http://127.0.0.1:${address.port}/api/v1/scans`);
+    assert.equal(historyResponse.status, 200);
+    assert.deepEqual(await historyResponse.json(), { total: 0, scans: [] });
+
+    const privateTargetResponse = await fetch(`http://127.0.0.1:${address.port}/api/v1/scans`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ url: 'http://127.0.0.1' }),
+    });
+    assert.equal(privateTargetResponse.status, 400);
+    assert.equal(typeof (await privateTargetResponse.json()).error, 'string');
+  } finally {
+    if (server?.listening) {
+      server.close();
+      await once(server, 'close');
+    }
+    if (previousVercel === undefined) delete process.env.VERCEL;
+    else process.env.VERCEL = previousVercel;
+    if (previousNodeEnv === undefined) delete process.env.NODE_ENV;
+    else process.env.NODE_ENV = previousNodeEnv;
+  }
+});
+
 test('runs a real HTTP inspection against a controlled local website with the validated IP pinned', async () => {
   let observedHost = '';
   let requestCount = 0;
