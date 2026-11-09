@@ -215,12 +215,13 @@ test('does not retain scans in production mode', async () => {
 test('creates a Vercel-compatible API app without opening a standalone listener', async () => {
   const previousVercel = process.env.VERCEL;
   const previousNodeEnv = process.env.NODE_ENV;
-  process.env.VERCEL = '1';
+  delete process.env.VERCEL;
   process.env.NODE_ENV = 'production';
 
   let server: http.Server | undefined;
   try {
     const { createApp } = await import('../server');
+    process.env.VERCEL = '1';
     const app = await createApp();
     server = app.listen(0, '127.0.0.1');
     await once(server, 'listening');
@@ -233,7 +234,10 @@ test('creates a Vercel-compatible API app without opening a standalone listener'
 
     const privateTargetResponse = await fetch(`http://127.0.0.1:${address.port}/api/v1/scans`, {
       method: 'POST',
-      headers: { 'content-type': 'application/json' },
+      headers: {
+        'content-type': 'application/json',
+        'x-forwarded-for': '198.51.100.27',
+      },
       body: JSON.stringify({ url: 'http://127.0.0.1' }),
     });
     assert.equal(privateTargetResponse.status, 400);

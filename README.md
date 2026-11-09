@@ -36,7 +36,7 @@ Vercel deployments use [vercel.json](./vercel.json) to serve the frontend from `
 
 - Live scan results are returned to the requester but are not retained or listed when `NODE_ENV=production`. In development and tests, history is in-memory and is lost when the process restarts.
 - Community report listing is empty and report submission/verification are disabled in production until authenticated moderation and a retention policy are implemented. In development and tests, reports are in-memory.
-- API requests are rate-limited per client IP in the running process. Use a distributed rate-limit store before deploying multiple server instances. If behind a reverse proxy, set `TRUST_PROXY` only to its known network name/IP/CIDR; boolean trust-all and hop-count settings are rejected.
+- API requests are rate-limited per client IP in the running process. Vercel deployments trust exactly the platform proxy hop so forwarded client IPs work with rate limiting. On other hosting providers, use a distributed rate-limit store before deploying multiple server instances and set `TRUST_PROXY` only to a known proxy network name/IP/CIDR; boolean trust-all and hop-count settings are rejected.
 - No external threat-intelligence feeds are configured by default. Production community matching has no reports until a protected intelligence source is configured.
 - Gemini analysis is optional. When its key is not configured or the service is unavailable, the AI module reports unavailable rather than fabricating an assessment.
 - The controlled tests use test fixtures and a local HTTP server; test fixtures are not returned by the production scan endpoint.

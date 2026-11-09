@@ -2,8 +2,7 @@ import express, { NextFunction, Request, Response } from 'express';
 import { rateLimit } from 'express-rate-limit';
 import dotenv from 'dotenv';
 import path from 'path';
-import { fileURLToPath } from 'url';
-import { createServer as createViteServer } from 'vite';
+import { fileURLToPath } from 'node:url';
 
 import { validateUrlForSsrf, normalizeTargetUrl, resolveHostingAndAsn } from './server/ssrf';
 import { analyzePhishingIndicators } from './server/phishingEngine';
@@ -25,7 +24,9 @@ export async function createApp() {
   const app = express();
   app.disable('x-powered-by');
   const trustedProxy = process.env.TRUST_PROXY?.trim();
-  if (trustedProxy) {
+  if (process.env.VERCEL === '1') {
+    app.set('trust proxy', 1);
+  } else if (trustedProxy) {
     if (trustedProxy.toLowerCase() === 'true' || /^\d+$/.test(trustedProxy)) {
       throw new Error('TRUST_PROXY must identify trusted proxy networks; boolean and hop-count values are not accepted.');
     }
@@ -512,6 +513,7 @@ export async function createApp() {
       res.status(404).json({ error: 'API endpoint not found.' });
     });
   } else if (process.env.NODE_ENV !== 'production') {
+    const { createServer: createViteServer } = await import('vite');
     const vite = await createViteServer({
       server: { middlewareMode: true },
       appType: 'spa',
@@ -551,7 +553,7 @@ async function startServer() {
   });
 }
 
-if (process.env.VERCEL !== '1') {
+if (process.argv[1] && path.resolve(process.argv[1]) === __filename) {
   startServer().catch(err => {
     console.error('Failed to start Sentinel server:', err);
     process.exit(1);
