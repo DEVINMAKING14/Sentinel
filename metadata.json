@@ -1,0 +1,6 @@
+{
+  "name": "SENTINEL — Web Trust & Threat Intelligence Platform",
+  "description": "Enterprise-grade intelligent phishing detection, website security assessment, SSL/TLS certificate inspection, and collaborative threat intelligence.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
