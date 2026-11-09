@@ -9,6 +9,7 @@ import { isPrivateOrReservedIp, normalizeTargetUrl, validateUrlForSsrf } from '.
 import { HeaderScanResult } from './securityScanner';
 import { TlsCertificateAnalysis } from './types';
 import { createInvestigationHandler } from './investigationRoute';
+import { restoreVercelApiPath } from './vercelPath';
 
 process.env.GEMINI_API_KEY = '';
 
@@ -247,6 +248,12 @@ test('creates a Vercel-compatible API app without opening a standalone listener'
     if (previousNodeEnv === undefined) delete process.env.NODE_ENV;
     else process.env.NODE_ENV = previousNodeEnv;
   }
+});
+
+test('restores Vercel-rewritten API paths and preserves caller query parameters', () => {
+  const request = { url: '/api/index?__sentinel_path=v1%2Fscans&q=customer&risk=ALL' };
+  restoreVercelApiPath(request);
+  assert.equal(request.url, '/api/v1/scans?q=customer&risk=ALL');
 });
 
 test('runs a real HTTP inspection against a controlled local website with the validated IP pinned', async () => {
