@@ -17,10 +17,9 @@ import { createInvestigationHandler } from './server/investigationRoute';
 
 dotenv.config();
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-export async function createApp() {
+export function createApp() {
   const app = express();
   app.disable('x-powered-by');
   const trustedProxy = process.env.TRUST_PROXY?.trim();
@@ -506,20 +505,8 @@ export async function createApp() {
   });
 
   // ==========================================
-  // Vite Dev Server / Static Hosting
-  // ==========================================
-  if (process.env.VERCEL === '1') {
-    app.use((_req: Request, res: Response) => {
-      res.status(404).json({ error: 'API endpoint not found.' });
-    });
-  } else if (process.env.NODE_ENV !== 'production') {
-    const { createServer: createViteServer } = await import('vite');
-    const vite = await createViteServer({
-      server: { middlewareMode: true },
-      appType: 'spa',
-    });
-    app.use(vite.middlewares);
-  } else {
+  // Production and serverless deployments serve the built frontend.
+  if (process.env.NODE_ENV === 'production' || process.env.VERCEL === '1') {
     app.use(express.static(path.resolve(__dirname, 'dist')));
     app.get('*', (_req: Request, res: Response) => {
       res.sendFile(path.resolve(__dirname, 'dist', 'index.html'));
@@ -545,17 +532,6 @@ export async function createApp() {
   return app;
 }
 
-async function startServer() {
-  const app = await createApp();
-  const PORT = parseInt(process.env.PORT || '3000', 10);
-  app.listen(PORT, '0.0.0.0', () => {
-    console.log(`[SENTINEL ENGINE] Threat Intelligence platform online on port ${PORT}`);
-  });
-}
+const app = createApp();
 
-if (process.argv[1] && path.resolve(process.argv[1]) === __filename) {
-  startServer().catch(err => {
-    console.error('Failed to start Sentinel server:', err);
-    process.exit(1);
-  });
-}
+export default app;

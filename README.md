@@ -30,7 +30,7 @@ npm start
 
 The production build creates the static frontend in `dist/` and a bundled Node server entry point in `server.js`. Test-only routes and fixture data are excluded from the server bundle. Run `npm start` after building. Set `NODE_ENV=production` in the deployment environment. Do not deploy `.env` with the build.
 
-Vercel deployments use [vercel.json](./vercel.json) to serve the frontend from `dist/` and rewrite `/api/*` requests to the Node API function in `api/index.ts`. The function restores the original API path before passing the request to Express. Configure `GEMINI_API_KEY` and any trusted-proxy settings in the Vercel project environment, then redeploy after changing them.
+Vercel deploys the default Express application exported from [server.ts](./server.ts) as one Node function, so the existing API routes are handled directly without an API rewrite or wrapper function. [vercel.json](./vercel.json) builds the frontend and includes `dist/` in the function bundle for static serving. Configure `GEMINI_API_KEY` in the Vercel project environment, then redeploy after changing it.
 
 ## Data and external services
 

@@ -9,7 +9,6 @@ import { isPrivateOrReservedIp, normalizeTargetUrl, validateUrlForSsrf } from '.
 import { HeaderScanResult } from './securityScanner';
 import { TlsCertificateAnalysis } from './types';
 import { createInvestigationHandler } from './investigationRoute';
-import { restoreVercelApiPath } from './vercelPath';
 
 process.env.GEMINI_API_KEY = '';
 
@@ -212,17 +211,16 @@ test('does not retain scans in production mode', async () => {
   }
 });
 
-test('creates a Vercel-compatible API app without opening a standalone listener', async () => {
+test('exports a Vercel-compatible Express app without starting a standalone listener', async () => {
   const previousVercel = process.env.VERCEL;
   const previousNodeEnv = process.env.NODE_ENV;
-  delete process.env.VERCEL;
+  const previousPort = process.env.PORT;
+  process.env.VERCEL = '1';
   process.env.NODE_ENV = 'production';
 
   let server: http.Server | undefined;
   try {
-    const { createApp } = await import('../server');
-    process.env.VERCEL = '1';
-    const app = await createApp();
+    const { default: app } = await import('../server');
     server = app.listen(0, '127.0.0.1');
     await once(server, 'listening');
     const address = server.address();
@@ -251,13 +249,9 @@ test('creates a Vercel-compatible API app without opening a standalone listener'
     else process.env.VERCEL = previousVercel;
     if (previousNodeEnv === undefined) delete process.env.NODE_ENV;
     else process.env.NODE_ENV = previousNodeEnv;
+    if (previousPort === undefined) delete process.env.PORT;
+    else process.env.PORT = previousPort;
   }
-});
-
-test('restores Vercel-rewritten API paths and preserves caller query parameters', () => {
-  const request = { url: '/api/index?__sentinel_path=v1%2Fscans&q=customer&risk=ALL' };
-  restoreVercelApiPath(request);
-  assert.equal(request.url, '/api/v1/scans?q=customer&risk=ALL');
 });
 
 test('runs a real HTTP inspection against a controlled local website with the validated IP pinned', async () => {
